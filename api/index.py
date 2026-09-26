@@ -32,11 +32,11 @@ HTML_TEMPLATE = """
                 <img src="https://www.bmkg.go.id/asset/img/logo/logo-bmkg.png" alt="Logo BMKG" class="h-16 bg-white p-1 rounded-full shadow">
                 <div>
                     <h1 class="text-xl md:text-2xl font-bold tracking-wide">SISTEM INTEGRASI PEMINJAMAN & BMN</h1>
-                    <p class="text-sky-200 text-sm">Badan Meteorologi, Klimatologi, dan Geofisika</p>
+                    <p class="text-sky-200 text-sm">Stasiun Meteorologi Djalaluddin Gorontalo</p>
                 </div>
             </div>
             <div class="bg-sky-950/60 px-4 py-2 rounded-lg border border-sky-400/30 text-xs text-sky-200">
-                <i class="fas fa-circle text-emerald-400 animate-pulse mr-1"></i> Status: <span class="font-semibold text-white">Online Vercel</span>
+                <i class="fas fa-circle text-emerald-400 animate-pulse mr-1"></i> Status: <span class="font-semibold text-white">Online</span>
             </div>
         </div>
     </header>
@@ -324,7 +324,7 @@ HTML_TEMPLATE = """
     </main>
 
     <footer class="mt-12 text-center text-xs text-slate-400">
-        <p>&copy; BMKG - Sistem Operasional Peminjaman Peralatan & Manajemen BMN</p>
+        <p>&copy; Sistem Operasional Peminjaman Peralatan & Manajemen BMN</p>
     </footer>
 
 </body>
