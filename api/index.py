@@ -139,16 +139,22 @@ HTML_TEMPLATE = """
                 </div>
             </div>
 
-            <!-- TAMPILAN QR UNIVERSAL -->
+            <!-- TAMPILAN QR UNIVERSAL (OTOMATIS SESUAI DOMAIN SAAT INI) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center text-center">
                 <h3 class="font-bold text-sky-900 mb-2">QR Code Portal Layanan</h3>
                 <p class="text-xs text-slate-500 mb-4">Scan QR code ini via HP untuk langsung mengakses portal peminjaman & pengembalian alat.</p>
-                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3 shadow-inner">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://pinjam-peralatan-ten.vercel.app" alt="QR Code Portal" class="w-44 h-44">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3 shadow-inner flex items-center justify-center min-h-[190px]">
+                    <img id="qrImage" src="" alt="QR Code Portal" class="w-44 h-44">
                 </div>
                 <span class="text-[10px] text-slate-400 font-mono">BMKG Universal QR Code System</span>
+
+                <!-- Script Otomatis Menyesuaikan URL Vercel Saat Ini -->
+                <script>
+                    const currentUrl = window.location.origin;
+                    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`;
+                    document.getElementById('qrImage').src = qrApiUrl;
+                </script>
             </div>
-        </section>
 
         <!-- ADMIN MODUL: KELOLA & TAMBAH JENIS PERALATAN BARU -->
         <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
