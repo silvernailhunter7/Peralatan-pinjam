@@ -1,140 +1,123 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-from datetime import datetime
-import qrcode
-import io
+import os
 import base64
-app = Flask(name, template_folder='../templates')
-app.secret_key = 'bmkg_secret_key_operasional'
-==========================================
-DATABASE IN-MEMORY / SESSION STATE
-==========================================
-inventory = [
-{"id": "BMKG-ALT-001", "nama": "AWS (Automatic Weather Station) Portable", "kategori": "Meteorologi", "stok": 3, "gambar": None},
-{"id": "BMKG-ALT-002", "nama": "Seismometer Portable", "kategori": "Geofisika", "stok": 2, "gambar": None},
-{"id": "BMKG-ALT-003", "nama": "Anemometer Digital", "kategori": "Meteorologi", "stok": 5, "gambar": None},
-{"id": "BMKG-ALT-004", "nama": "Tide Gauge Sensor", "kategori": "Klimatologi", "stok": 1, "gambar": None}
-]
-peminjaman_logs = []
-bmn_logs = []
-def generate_qr(data_url):
-qr = qrcode.QRCode(version=1, box_size=5, border=2)
-qr.add_data(data_url)
-qr.make(fit=True)
-img = qr.make_image(fill_color="#0f4c81", back_color="white")
-buf = io.BytesIO()
-img.save(buf)
-return base64.b64encode(buf.getvalue()).decode('utf-8')
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, flash
 
+app = Flask(__name__, template_folder='../templates')
+app.secret_key = 'bmkg-secret-key-operasional'
+
+# --- DATABASE IN-MEMORY ---
+inventory = [
+    {"ID": "BMKG-ALT-001", "Nama": "AWS (Automatic Weather Station) Portable", "Kategori": "Meteorologi", "Stok": 3, "Gambar": None},
+    {"ID": "BMKG-ALT-002", "Nama": "Seismometer Portable", "Kategori": "Geofisika", "Stok": 2, "Gambar": None},
+    {"ID": "BMKG-ALT-003", "Nama": "Anemometer Digital", "Kategori": "Meteorologi", "Stok": 5, "Gambar": None},
+    {"ID": "BMKG-ALT-004", "Nama": "Tide Gauge Sensor", "Kategori": "Klimatologi", "Stok": 1, "Gambar": None}
+]
+
+peminjaman = []
+bmn_logs = []
 
 @app.route('/')
 def home():
-# Hitung statistik
-total_stok = sum([item['stok'] for item in inventory])
-total_dipinjam = sum([1 for log in peminjaman_logs if log['status'] == 'Dipinjam'])
-total_dikembalikan = sum([1 for log in peminjaman_logs if log['status'] == 'Dikembalikan'])
-# URL Universal QR
-host_url = request.host_url
-qr_b64 = generate_qr(host_url)
-
-return render_template(
-    'index.html',
-    inventory=inventory,
-    peminjaman_logs=peminjaman_logs,
-    bmn_logs=bmn_logs,
-    total_stok=total_stok,
-    total_dipinjam=total_dipinjam,
-    total_dikembalikan=total_dikembalikan,
-    qr_b64=qr_b64
-)
-
+    active_peminjaman = [p for p in peminjaman if p['Status'] == 'Dipinjam']
+    return render_template(
+        'index.html',
+        inventory=inventory,
+        peminjaman=peminjaman,
+        active_peminjaman=active_peminjaman,
+        bmn_logs=bmn_logs
+    )
 
 @app.route('/pinjam', methods=['POST'])
-def pinjam_alat():
-nama_peminjam = request.form.get('nama_peminjam')
-alat_id = request.form.get('alat_id')
-jumlah = int(request.form.get('jumlah', 1))
-# Cari alat di inventaris
-item = next((x for x in inventory if x['id'] == alat_id), None)
-if item and item['stok'] >= jumlah:
-    item['stok'] -= jumlah
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def pinjam():
+    nama = request.form.get('nama')
+    nama_alat = request.form.get('nama_alat')
+    jumlah = int(request.form.get('jumlah', 1))
     
-    peminjaman_logs.insert(0, {
-        "id": len(peminjaman_logs) + 1,
-        "timestamp_pinjam": timestamp,
-        "timestamp_kembali": "-",
-        "peminjam": nama_peminjam,
-        "alat_id": item['id'],
-        "nama_alat": item['nama'],
-        "jumlah": jumlah,
-        "status": "Dipinjam"
-    })
-    flash(f"Peminjaman {item['nama']} berhasil dicatat!", "success")
-else:
-    flash("Stok peralatan tidak mencukupi!", "danger")
-    
-return redirect(url_for('home'))
-
+    item = next((i for i in inventory if i['Nama'] == nama_alat), None)
+    if item and item['Stok'] >= jumlah:
+        item['Stok'] -= jumlah
+        peminjaman.append({
+            'Index': len(peminjaman),
+            'TimestampPinjam': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'TimestampKembali': '-',
+            'NamaPeminjam': nama,
+            'IDAlat': item['ID'],
+            'NamaAlat': item['Nama'],
+            'Jumlah': jumlah,
+            'Status': 'Dipinjam'
+        })
+        flash('Peminjaman berhasil dicatat!', 'success')
+    else:
+        flash('Stok alat tidak mencukupi!', 'danger')
+    return redirect(url_for('home'))
 
 @app.route('/kembali', methods=['POST'])
-def kembali_alat():
-log_id = int(request.form.get('log_id'))
-log = next((x for x in peminjaman_logs if x['id'] == log_id), None)
-if log and log['status'] == 'Dipinjam':
-    # Kembalikan stok
-    item = next((x for x in inventory if x['id'] == log['alat_id']), None)
-    if item:
-        item['stok'] += log['jumlah']
-        
-    log['status'] = "Dikembalikan"
-    log['timestamp_kembali'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    flash(f"Peralatan {log['nama_alat']} berhasil dikembalikan!", "success")
+def kembali():
+    idx_str = request.form.get('pilihan_transaksi')
+    if idx_str is not None and idx_str.isdigit():
+        idx = int(idx_str)
+        if 0 <= idx < len(peminjaman) and peminjaman[idx]['Status'] == 'Dipinjam':
+            tx = peminjaman[idx]
+            tx['Status'] = 'Dikembalikan'
+            tx['TimestampKembali'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            item = next((i for i in inventory if i['Nama'] == tx['NamaAlat']), None)
+            if item:
+                item['Stok'] += tx['Jumlah']
+            flash('Pengembalian berhasil diproses!', 'success')
+    return redirect(url_for('home'))
 
-return redirect(url_for('home'))
-
-
-@app.route('/admin/tambah-alat', methods=['POST'])
+@app.route('/tambah_alat', methods=['POST'])
 def tambah_alat():
-id_alat = request.form.get('id_alat')
-nama_alat = request.form.get('nama_alat')
-kategori = request.form.get('kategori')
-stok = int(request.form.get('stok', 1))
-file_gambar = request.files.get('gambar')
-img_b64 = None
-if file_gambar and file_gambar.filename != '':
-    img_bytes = file_gambar.read()
-    img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+    id_alat = request.form.get('id_alat')
+    nama_alat = request.form.get('nama_alat')
+    kategori = request.form.get('kategori')
+    stok = int(request.form.get('stok', 1))
     
-inventory.append({
-    "id": id_alat,
-    "nama": nama_alat,
-    "kategori": kategori,
-    "stok": stok,
-    "gambar": img_b64
-})
-flash("Jenis peralatan baru berhasil ditambahkan!", "success")
-return redirect(url_for('home'))
+    file_gambar = request.files.get('gambar')
+    gambar_b64 = None
+    if file_gambar and file_gambar.filename != '':
+        gambar_b64 = base64.b64encode(file_gambar.read()).decode('utf-8')
+        
+    inventory.append({
+        "ID": id_alat,
+        "Nama": nama_alat,
+        "Kategori": kategori,
+        "Stok": stok,
+        "Gambar": gambar_b64
+    })
+    flash('Peralatan baru berhasil ditambahkan!', 'success')
+    return redirect(url_for('home'))
 
+@app.route('/bmn_masuk', methods=['POST'])
+def bmn_masuk():
+    bmn_logs.append({
+        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'Jenis': 'MASUK',
+        'ID': request.form.get('id_bmn'),
+        'Nama': request.form.get('nama_bmn'),
+        'Jumlah': request.form.get('jumlah'),
+        'TujuanSumber': request.form.get('sumber')
+    })
+    flash('Pencatatan BMN Masuk berhasil!', 'success')
+    return redirect(url_for('home'))
 
-@app.route('/admin/bmn', methods=['POST'])
-def transaksi_bmn():
-jenis = request.form.get('jenis_transaksi')
-id_bmn = request.form.get('id_bmn')
-nama_bmn = request.form.get('nama_bmn')
-jumlah = int(request.form.get('jumlah', 1))
-tujuan_sumber = request.form.get('tujuan_sumber')
-timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-bmn_logs.insert(0, {
-    "timestamp": timestamp,
-    "jenis": jenis,
-    "id_bmn": id_bmn,
-    "nama_bmn": nama_bmn,
-    "jumlah": jumlah,
-    "tujuan_sumber": tujuan_sumber
-})
-flash(f"Transaksi BMN {jenis} berhasil dicatat!", "success")
-return redirect(url_for('home'))
+@app.route('/bmn_keluar', methods=['POST'])
+def bmn_keluar():
+    bmn_logs.append({
+        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'Jenis': 'KELUAR',
+        'ID': request.form.get('id_bmn'),
+        'Nama': request.form.get('nama_bmn'),
+        'Jumlah': request.form.get('jumlah'),
+        'TujuanSumber': request.form.get('tujuan')
+    })
+    flash('Pencatatan BMN Keluar berhasil!', 'warning')
+    return redirect(url_for('home'))
 
+# Eksplisit untuk Vercel Serverless Function Engine
+app = app
 
-if name == 'main':
-app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
