@@ -154,6 +154,37 @@ HTML_TEMPLATE = """
             </div>
         </section>
 
+        <!-- ADMIN MODUL: KELOLA & TAMBAH JENIS PERALATAN BARU -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-sky-900 mb-4 pb-2 border-b flex items-center"><i class="fas fa-cog mr-2"></i> Admin Kelola Peralatan (Tambah Jenis Alat Baru)</h2>
+            <form action="/tambah_alat" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ID / Kode Alat</label>
+                    <input type="text" name="id_alat" required placeholder="Contoh: BMKG-ALT-005" class="w-full px-3 py-2 text-sm border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Peralatan</label>
+                    <input type="text" name="nama_alat" required placeholder="Nama Alat Operasional" class="w-full px-3 py-2 text-sm border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori BMKG</label>
+                    <select name="kategori" class="w-full px-3 py-2 text-sm border rounded-lg bg-white">
+                        <option value="Meteorologi">Meteorologi</option>
+                        <option value="Klimatologi">Klimatologi</option>
+                        <option value="Geofisika">Geofisika</option>
+                        <option value="Pendukung Operasional">Pendukung Operasional</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Stok Awal</label>
+                    <div class="flex gap-2">
+                        <input type="number" name="stok" min="1" value="1" required class="w-full px-3 py-2 text-sm border rounded-lg">
+                        <button type="submit" class="bg-sky-900 hover:bg-sky-950 text-white font-semibold px-4 py-2 rounded-lg text-sm whitespace-nowrap"><i class="fas fa-plus mr-1"></i> Tambah</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
         <!-- TRACKER TABEL STOK & LOG -->
         <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
             <div>
@@ -351,6 +382,22 @@ def kembali():
             flash('Pengembalian berhasil diproses!', 'success')
     return redirect(url_for('home'))
 
+@app.route('/tambah_alat', methods=['POST'])
+def tambah_alat():
+    id_alat = request.form.get('id_alat')
+    nama_alat = request.form.get('nama_alat')
+    kategori = request.form.get('kategori')
+    stok = int(request.form.get('stok', 1))
+    
+    inventory.append({
+        "ID": id_alat,
+        "Nama": nama_alat,
+        "Kategori": kategori,
+        "Stok": stok
+    })
+    flash('Peralatan baru berhasil ditambahkan!', 'success')
+    return redirect(url_for('home'))
+
 @app.route('/bmn_masuk', methods=['POST'])
 def bmn_masuk():
     bmn_logs.append({
@@ -377,7 +424,6 @@ def bmn_keluar():
     flash('Pencatatan BMN Keluar berhasil!', 'warning')
     return redirect(url_for('home'))
 
-# Error Handler global untuk mencegah 500 Unhandled Exception
 @app.errorhandler(500)
 def server_error(e):
     return f"<h3>Internal Error Tercatat</h3><p>{str(e)}</p>", 500
