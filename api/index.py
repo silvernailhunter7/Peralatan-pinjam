@@ -7,10 +7,6 @@ app.secret_key = 'bmkg-secret-key-operasional'
 
 # --- DATABASE IN-MEMORY ---
 inventory = [
-    {"ID": "BMKG-ALT-001", "Nama": "AWS (Automatic Weather Station) Portable", "Kategori": "Meteorologi", "Stok": 3},
-    {"ID": "BMKG-ALT-002", "Nama": "Seismometer Portable", "Kategori": "Geofisika", "Stok": 2},
-    {"ID": "BMKG-ALT-003", "Nama": "Anemometer Digital", "Kategori": "Meteorologi", "Stok": 5},
-    {"ID": "BMKG-ALT-004", "Nama": "Tide Gauge Sensor", "Kategori": "Klimatologi", "Stok": 1}
 ]
 
 peminjaman = []
