@@ -155,7 +155,8 @@ HTML_TEMPLATE = """
                     document.getElementById('qrImage').src = qrApiUrl;
                 </script>
             </div>
-
+    </section>
+    
         <!-- ADMIN MODUL: KELOLA & TAMBAH JENIS PERALATAN BARU -->
         <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 class="text-lg font-bold text-sky-900 mb-4 pb-2 border-b flex items-center"><i class="fas fa-cog mr-2"></i> Admin Kelola Peralatan (Tambah Jenis Alat Baru)</h2>
