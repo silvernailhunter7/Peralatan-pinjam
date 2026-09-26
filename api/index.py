@@ -3,7 +3,11 @@ import base64
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 
-app = Flask(__name__, template_folder='../templates')
+# Penyesuaian Path Absolut untuk Vercel Serverless
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_DIR = os.path.join(BASE_DIR, '..', 'templates')
+
+app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.secret_key = 'bmkg-secret-key-operasional'
 
 # --- DATABASE IN-MEMORY ---
@@ -116,7 +120,6 @@ def bmn_keluar():
     flash('Pencatatan BMN Keluar berhasil!', 'warning')
     return redirect(url_for('home'))
 
-# Eksplisit untuk Vercel Serverless Function Engine
 app = app
 
 if __name__ == '__main__':
