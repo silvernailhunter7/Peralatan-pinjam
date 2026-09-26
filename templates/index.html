@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Integrasi Peminjaman & BMN - BMKG</title>
+    <!-- Tailwind CSS & TomSelect untuk Search Dropdown -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <style>
+        .bg-bmkg { background-color: #0f4c81; }
+        .border-bmkg { border-color: #0f4c81; }
+        .text-bmkg { color: #0f4c81; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <!-- Header BMKG -->
+    <header class="bg-bmkg text-white shadow-lg py-6 px-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4 text-center md:text-left">
+                <img src="https://www.bmkg.go.id/asset/img/logo/logo-bmkg.png" alt="Logo BMKG" class="h-16 bg-white p-1 rounded">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-wide">SISTEM INTEGRASI PEMINJAMAN PERALATAN & MANAJEMEN BMN</h1>
+                    <p class="text-sm opacity-90">Badan Meteorologi, Klimatologi, dan Geofisika</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-8">
+
+        <!-- Flash Alert -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="p-4 mb-4 rounded-lg text-white font-medium shadow-md {% if category == 'danger' %}bg-red-600{% else %}bg-emerald-600{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Metrics Dashboard Tracker -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-bmkg">
+                <p class="text-xs text-slate-500 uppercase font-semibold">Total Unit Alat Tersedia</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_stok }} Unit</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500">
+                <p class="text-xs text-slate-500 uppercase font-semibold">Sedang Dipinjam</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_dipinjam }} Transaksi</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                <p class="text-xs text-slate-500 uppercase font-semibold">Selesai Dikembalikan</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_dikembalikan }} Transaksi</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-400">
+                <p class="text-xs text-slate-500 uppercase font-semibold">Status Sistem</p>
+                <p class="text-lg font-bold text-emerald-600 mt-1">🟢 Operasional</p>
+            </div>
+        </section>
+
+        <!-- Modul Portal Layanan Peminjaman & Pengembalian -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-bmkg mb-4 flex items-center gap-2">
+                    <span>📲</span> Portal Layanan Peralatan Operasional
+                </h2>
+                
+                <!-- Tab Controls -->
+                <div class="flex border-b border-slate-200 mb-6">
+                    <button onclick="switchTab('pinjam')" id="tab-pinjam-btn" class="py-2 px-4 border-b-2 font-semibold text-bmkg border-bmkg">📤 Meminjam Peralatan</button>
+                    <button onclick="switchTab('kembali')" id="tab-kembali-btn" class="py-2 px-4 border-b-2 font-semibold text-slate-400 border-transparent">📥 Mengembalikan Peralatan</button>
+                </div>
+
+                <!-- Form Meminjam Alat -->
+                <form id="form-pinjam" action="/pinjam" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Nama Lengkap Peminjam / Personel</label>
+                        <input type="text" name="nama_peminjam" required placeholder="Contoh: Budi Santoso" class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-bmkg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Cari & Pilih Peralatan BMKG</label>
+                        <select id="select-alat" name="alat_id" required>
+                            <option value="">-- Cari atau Pilih Alat --</option>
+                            {% for item in inventory %}
+                                <option value="{{ item.id }}" {% if item.stok < 1 %}disabled{% endif %}>
+                                    {{ item.nama }} (Sisa Stok: {{ item.stok }} Unit)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Jumlah Unit Dipinjam</label>
+                        <input type="number" name="jumlah" min="1" value="1" required class="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-bmkg">
+                    </div>
+                    <button type="submit" class="w-full bg-bmkg text-white font-semibold py-3 rounded-lg hover:bg-slate-800 transition">🚀 Submit Peminjaman</button>
+                </form>
+
+                <!-- Form Mengembalikan Alat -->
+                <form id="form-kembali" action="/kembali" method="POST" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Cari Transaksi Peminjaman Aktif</label>
+                        <select id="select-kembali" name="log_id" required>
+                            <option value="">-- Cari Nama Peminjam / Alat --</option>
+                            {% for log in peminjaman_logs %}
+                                {% if log.status == 'Dipinjam' %}
+                                    <option value="{{ log.id }}">
+                                        {{ log.peminjam }} - {{ log.nama_alat }} ({{ log.jumlah }} Unit) | Pinjam: {{ log.timestamp_pinjam }}
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-lg hover:bg-emerald-700 transition">✅ Proses Pengembalian Alat</button>
+                </form>
+            </div>
+
+            <!-- Card QR Universal -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center flex flex-col items-center justify-center">
+                <h3 class="font-bold text-slate-800 mb-2">📱 QR Code Universal</h3>
+                <p class="text-xs text-slate-500 mb-4">Scan QR untuk mengakses Portal Peminjaman dan Pengembalian Alat dari smartphone.</p>
+                <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR Code Universal" class="w-48 h-48 border p-2 rounded-lg shadow-inner">
+            </div>
+        </section>
+
+        <!-- Tabel Tracker Stok & Riwayat Peminjaman -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
+            <div>
+                <h3 class="text-md font-bold text-bmkg mb-3">📋 Status Stok Peralatan Operasional</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="p-3 border">ID Alat</th>
+                                <th class="p-3 border">Nama Peralatan</th>
+                                <th class="p-3 border">Kategori</th>
+                                <th class="p-3 border">Stok Tersedia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory %}
+                            <tr class="hover:bg-slate-50 border-b">
+                                <td class="p-3 font-mono font-bold">{{ item.id }}</td>
+                                <td class="p-3 font-medium">{{ item.nama }}</td>
+                                <td class="p-3">{{ item.kategori }}</td>
+                                <td class="p-3 font-bold {% if item.stok == 0 %}text-red-500{% else %}text-emerald-600{% endif %}">
+                                    {{ item.stok }} Unit
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-md font-bold text-bmkg mb-3">⏱️ Riwayat Transaksi Berdasarkan Timestamp Real-Time</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="p-3 border">Timestamp Pinjam</th>
+                                <th class="p-3 border">Timestamp Kembali</th>
+                                <th class="p-3 border">Nama Peminjam</th>
+                                <th class="p-3 border">Peralatan</th>
+                                <th class="p-3 border">Jumlah</th>
+                                <th class="p-3 border">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in peminjaman_logs %}
+                            <tr class="hover:bg-slate-50 border-b">
+                                <td class="p-3 text-xs">{{ log.timestamp_pinjam }}</td>
+                                <td class="p-3 text-xs">{{ log.timestamp_kembali }}</td>
+                                <td class="p-3 font-medium">{{ log.peminjam }}</td>
+                                <td class="p-3">{{ log.nama_alat }}</td>
+                                <td class="p-3 font-bold">{{ log.jumlah }}</td>
+                                <td class="p-3">
+                                    <span class="px-2 py-1 rounded text-xs font-bold {% if log.status == 'Dipinjam' %}bg-amber-100 text-amber-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                                        {{ log.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="p-4 text-center text-slate-400">Belum ada riwayat transaksi peminjaman.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Section (Tambah Alat + Upload Gambar & Manajemen BMN) -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Form Tambah Peralatan -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-md font-bold text-bmkg mb-4">⚙️ Admin: Tambah Jenis Peralatan & Foto</h3>
+                <form action="/admin/tambah-alat" method="POST" enctype="multipart/form-data" class="space-y-3">
+                    <input type="text" name="id_alat" placeholder="ID Alat (Contoh: BMKG-ALT-005)" required class="w-full border p-2 rounded text-sm">
+                    <input type="text" name="nama_alat" placeholder="Nama Peralatan" required class="w-full border p-2 rounded text-sm">
+                    <select name="kategori" class="w-full border p-2 rounded text-sm">
+                        <option value="Meteorologi">Meteorologi</option>
+                        <option value="Klimatologi">Klimatologi</option>
+                        <option value="Geofisika">Geofisika</option>
+                        <option value="Pendukung Operasional">Pendukung Operasional</option>
+                    </select>
+                    <input type="number" name="stok" min="1" placeholder="Jumlah Stok Awal" required class="w-full border p-2 rounded text-sm">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Unggah Foto Peralatan</label>
+                        <input type="file" name="gambar" accept="image/*" class="w-full text-xs">
+                    </div>
+                    <button type="submit" class="w-full bg-slate-800 text-white py-2 rounded text-sm font-semibold hover:bg-slate-900">Simpan Alat Baru</button>
+                </form>
+
+                <!-- Galeri Gambar Alat -->
+                <div class="mt-6 grid grid-cols-3 gap-2">
+                    {% for item in inventory %}
+                        {% if item.gambar %}
+                        <div class="border rounded p-1 text-center">
+                            <img src="data:image/png;base64,{{ item.gambar }}" class="w-full h-16 object-cover rounded mb-1">
+                            <p class="text-[10px] truncate font-bold">{{ item.nama }}</p>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Form Mutasi BMN -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-md font-bold text-bmkg mb-4">📦 Admin BMN: Pencatatan Barang Masuk / Keluar</h3>
+                <form action="/admin/bmn" method="POST" class="space-y-3">
+                    <select name="jenis_transaksi" class="w-full border p-2 rounded text-sm">
+                        <option value="MASUK">📥 BMN MASUK</option>
+                        <option value="KELUAR">📤 BMN KELUAR</option>
+                    </select>
+                    <input type="text" name="id_bmn" placeholder="Kode / ID BMN" required class="w-full border p-2 rounded text-sm">
+                    <input type="text" name="nama_bmn" placeholder="Nama Barang BMN" required class="w-full border p-2 rounded text-sm">
+                    <input type="number" name="jumlah" min="1" placeholder="Jumlah Unit" required class="w-full border p-2 rounded text-sm">
+                    <input type="text" name="tujuan_sumber" placeholder="Tujuan Penyaluran / Sumber Pengadaan" required class="w-full border p-2 rounded text-sm">
+                    <button type="submit" class="w-full bg-slate-800 text-white py-2 rounded text-sm font-semibold hover:bg-slate-900">Catat Transaksi BMN</button>
+                </form>
+
+                <!-- Tabel Log BMN -->
+                <div class="mt-4 overflow-x-auto">
+                    <table class="w-full text-xs text-left border">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="p-1.5 border">Jenis</th>
+                                <th class="p-1.5 border">Nama BMN</th>
+                                <th class="p-1.5 border">Jml</th>
+                                <th class="p-1.5 border">Tujuan/Sumber</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bmn in bmn_logs %}
+                            <tr>
+                                <td class="p-1.5 border font-bold {% if bmn.jenis == 'MASUK' %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ bmn.jenis }}</td>
+                                <td class="p-1.5 border">{{ bmn.nama_bmn }}</td>
+                                <td class="p-1.5 border">{{ bmn.jumlah }}</td>
+                                <td class="p-1.5 border">{{ bmn.tujuan_sumber }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="p-2 text-center text-slate-400">Belum ada mutasi BMN.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Init Searchable Dropdowns
+        new TomSelect("#select-alat", { create: false, sortField: { field: "text" } });
+        new TomSelect("#select-kembali", { create: false, sortField: { field: "text" } });
+
+        // Tab Switcher Function
+        function switchTab(type) {
+            const formPinjam = document.getElementById('form-pinjam');
+            const formKembali = document.getElementById('form-kembali');
+            const tabPinjamBtn = document.getElementById('tab-pinjam-btn');
+            const tabKembaliBtn = document.getElementById('tab-kembali-btn');
+
+            if (type === 'pinjam') {
+                formPinjam.classList.remove('hidden');
+                formKembali.classList.add('hidden');
+                tabPinjamBtn.className = "py-2 px-4 border-b-2 font-semibold text-bmkg border-bmkg";
+                tabKembaliBtn.className = "py-2 px-4 border-b-2 font-semibold text-slate-400 border-transparent";
+            } else {
+                formKembali.classList.remove('hidden');
+                formPinjam.classList.add('hidden');
+                tabKembaliBtn.className = "py-2 px-4 border-b-2 font-semibold text-bmkg border-bmkg";
+                tabPinjamBtn.className = "py-2 px-4 border-b-2 font-semibold text-slate-400 border-transparent";
+            }
+        }
+    </script>
+</body>
+</html>
